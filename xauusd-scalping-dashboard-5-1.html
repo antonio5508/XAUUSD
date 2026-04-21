@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XAUUSD — Scalping Institutionnel</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#C9A84C;--gold-light:#F0D080;--gold-dark:#8B6914;
+  --bg:#080B0F;--panel:#0F1419;--border:rgba(201,168,76,.18);
+  --green:#00E5A0;--red:#FF4560;--blue:#38BDF8;
+  --muted:#556070;--text:#E8DCC8;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;}
+.container{max-width:1400px;margin:0 auto;padding:24px 20px;}
+
+header{display:flex;align-items:center;justify-content:space-between;padding-bottom:24px;border-bottom:1px solid var(--border);margin-bottom:24px;}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:3rem;letter-spacing:.08em;background:linear-gradient(135deg,var(--gold-light),var(--gold),var(--gold-dark));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.tagline{font-family:'Space Mono',monospace;font-size:.62rem;color:var(--muted);letter-spacing:.2em;text-transform:uppercase;margin-top:2px;}
+.hdr-right{display:flex;align-items:center;gap:14px;}
+#clock{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--gold);letter-spacing:.1em;}
+.live-badge{display:flex;align-items:center;gap:7px;background:rgba(0,229,160,.08);border:1px solid rgba(0,229,160,.25);padding:5px 13px;border-radius:4px;font-family:'Space Mono',monospace;font-size:.68rem;color:var(--green);letter-spacing:.12em;}
+.live-dot{width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 1.4s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.35;transform:scale(.65);}}
+
+/* API KEY — intégrée dans le JS */
+
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px;}
+.grid2{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px;}
+.grid3b{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px;}
+.full{margin-bottom:16px;}
+
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:20px;position:relative;overflow:hidden;}
+.panel::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.5;}
+.panel-title{font-family:'Space Mono',monospace;font-size:.62rem;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.panel-title::before{content:'';width:3px;height:12px;background:var(--gold);border-radius:2px;display:inline-block;}
+
+.price-main{font-family:'Bebas Neue',sans-serif;font-size:4.5rem;letter-spacing:.04em;background:linear-gradient(135deg,#fff,var(--gold-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1;margin-bottom:6px;}
+.price-change{font-family:'Space Mono',monospace;font-size:.82rem;padding:3px 10px;border-radius:3px;display:inline-block;}
+.price-change.up{background:rgba(0,229,160,.12);color:var(--green);}
+.price-change.down{background:rgba(255,69,96,.12);color:var(--red);}
+
+.sessions-grid{display:flex;flex-direction:column;gap:10px;}
+.session-row{display:flex;align-items:center;gap:12px;}
+.session-label{font-family:'Space Mono',monospace;font-size:.63rem;width:80px;color:var(--muted);}
+.session-bar-wrap{flex:1;height:6px;background:rgba(255,255,255,.05);border-radius:3px;overflow:hidden;}
+.session-bar{height:100%;border-radius:3px;}
+.sess-status{font-family:'Space Mono',monospace;font-size:.58rem;width:52px;text-align:right;}
+.sess-status.active{color:var(--green);}
+.sess-status.inactive{color:var(--muted);}
+.sess-status.overlap{color:var(--gold);}
+
+.signal-box{border-radius:6px;padding:16px;text-align:center;border:1px solid;margin-bottom:12px;transition:all .4s;}
+.signal-box.buy{background:rgba(0,229,160,.07);border-color:rgba(0,229,160,.3);}
+.signal-box.sell{background:rgba(255,69,96,.07);border-color:rgba(255,69,96,.3);}
+.signal-box.neutral{background:rgba(56,189,248,.06);border-color:rgba(56,189,248,.2);}
+.signal-label{font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:.1em;}
+.signal-box.buy .signal-label{color:var(--green);}
+.signal-box.sell .signal-label{color:var(--red);}
+.signal-box.neutral .signal-label{color:var(--blue);}
+.signal-sub{font-family:'Space Mono',monospace;font-size:.58rem;color:var(--muted);letter-spacing:.15em;margin-top:3px;}
+
+.score-wrap{margin-top:8px;}
+.score-label{display:flex;justify-content:space-between;font-size:.67rem;margin-bottom:4px;}
+.score-label span:first-child{color:var(--muted);font-family:'Space Mono',monospace;}
+.score-label span:last-child{font-family:'Space Mono',monospace;color:var(--gold-light);}
+.score-bar{height:6px;background:rgba(255,255,255,.05);border-radius:3px;overflow:hidden;}
+.score-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--gold-dark),var(--gold-light));transition:width .6s ease;}
+
+.indicator-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.indicator-row:last-child{border-bottom:none;}
+.ind-name{font-family:'Space Mono',monospace;font-size:.67rem;color:var(--muted);}
+.ind-value{font-family:'Space Mono',monospace;font-size:.75rem;font-weight:700;color:var(--text);}
+.ind-signal{font-size:.63rem;padding:2px 8px;border-radius:3px;font-family:'Space Mono',monospace;}
+.ind-signal.bull{background:rgba(0,229,160,.12);color:var(--green);}
+.ind-signal.bear{background:rgba(255,69,96,.12);color:var(--red);}
+.ind-signal.neut{background:rgba(56,189,248,.08);color:var(--blue);}
+
+.candle-chart{display:flex;align-items:flex-end;gap:3px;height:60px;margin-top:8px;}
+.candle-wrap{flex:1;display:flex;align-items:center;height:100%;justify-content:flex-end;position:relative;}
+.candle-wick{width:1px;position:absolute;}
+.candle-body{width:6px;border-radius:1px;min-height:2px;position:absolute;}
+.candle-wrap.bull .candle-wick,.candle-wrap.bull .candle-body{background:var(--green);}
+.candle-wrap.bear .candle-wick,.candle-wrap.bear .candle-body{background:var(--red);}
+
+.levels-table{width:100%;border-collapse:collapse;}
+.levels-table tr{border-bottom:1px solid rgba(255,255,255,.04);}
+.levels-table tr:last-child{border-bottom:none;}
+.levels-table td{padding:7px 4px;font-size:.8rem;}
+.levels-table td:first-child{color:var(--muted);font-size:.7rem;font-family:'Space Mono',monospace;}
+.levels-table td:last-child{text-align:right;font-family:'Space Mono',monospace;font-weight:700;}
+.lv-res{color:var(--red);}
+.lv-sup{color:var(--green);}
+.lv-pivot{color:var(--gold);}
+
+.rules-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.rule-card{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:14px;}
+.rule-num{font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--gold-dark);line-height:1;margin-bottom:4px;}
+.rule-title{font-size:.78rem;font-weight:500;color:var(--gold-light);margin-bottom:6px;}
+.rule-body{font-size:.72rem;color:var(--muted);line-height:1.6;}
+.rule-body strong{color:var(--text);}
+
+.risk-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.risk-row:last-child{border-bottom:none;}
+.risk-label{font-size:.72rem;color:var(--muted);}
+.risk-val{font-family:'Space Mono',monospace;font-size:.78rem;font-weight:700;color:var(--gold-light);}
+.risk-val.green{color:var(--green);}
+.risk-val.red{color:var(--red);}
+
+.flow-steps{display:flex;flex-direction:column;gap:10px;margin-bottom:20px;}
+.flow-step{display:flex;gap:14px;align-items:flex-start;}
+.flow-num{width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--gold-dark),var(--gold));display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:.65rem;font-weight:700;color:var(--bg);flex-shrink:0;margin-top:2px;}
+.flow-title{font-size:.8rem;font-weight:500;color:var(--text);margin-bottom:2px;}
+.flow-desc{font-size:.7rem;color:var(--muted);line-height:1.5;}
+.flow-desc strong{color:var(--gold);}
+
+.tf-toggle{display:flex;gap:6px;margin-bottom:14px;}
+.tf-btn{padding:4px 12px;border-radius:3px;font-family:'Space Mono',monospace;font-size:.62rem;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);letter-spacing:.1em;transition:all .2s;}
+.tf-btn.active{background:rgba(201,168,76,.12);border-color:var(--gold);color:var(--gold);}
+
+.alert-box{background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.2);border-left:3px solid var(--gold);border-radius:4px;padding:12px 16px;margin-bottom:10px;font-size:.75rem;line-height:1.6;}
+.alert-header{font-family:'Space Mono',monospace;font-size:.6rem;color:var(--gold);letter-spacing:.15em;margin-bottom:4px;}
+
+.econ-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.econ-row:last-child{border-bottom:none;}
+
+/* Pivot info box */
+.pivot-info{font-size:.72rem;color:var(--muted);margin-top:6px;font-family:'Space Mono',monospace;}
+.pivot-info strong{color:var(--gold);}
+
+footer{border-top:1px solid var(--border);padding-top:16px;margin-top:8px;display:flex;justify-content:space-between;}
+footer p{font-size:.67rem;color:var(--muted);font-family:'Space Mono',monospace;}
+
+#loader{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;transition:opacity .6s;}
+.loader-logo{font-family:'Bebas Neue',sans-serif;font-size:4rem;background:linear-gradient(135deg,var(--gold-light),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:16px;}
+.loader-bar{width:260px;height:3px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;}
+.loader-fill{height:100%;background:linear-gradient(90deg,var(--gold-dark),var(--gold-light));border-radius:2px;animation:load 1.8s ease forwards;}
+@keyframes load{from{width:0;}to{width:100%;}}
+.loader-txt{font-family:'Space Mono',monospace;font-size:.65rem;color:var(--muted);margin-top:12px;letter-spacing:.2em;}
+
+@media(max-width:900px){.grid3,.grid2,.grid3b{grid-template-columns:1fr;}.rules-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="loader-logo">XAU/USD</div>
+  <div class="loader-bar"><div class="loader-fill"></div></div>
+  <div class="loader-txt">CHARGEMENT DES DONNÉES...</div>
+</div>
+
+<div class="container">
+
+
+
+<!-- HEADER -->
+<header>
+  <div>
+    <div class="logo">XAU/USD</div>
+    <div class="tagline">Scalping Institutionnel · GMT+0 · 1M / 5M</div>
+  </div>
+  <div class="hdr-right">
+    <div id="clock">00:00:00</div>
+    <div class="live-badge"><div class="live-dot"></div><span id="badge-txt">CHARGEMENT</span></div>
+  </div>
+</header>
+
+<!-- ROW 1 -->
+<div class="grid3">
+  <div class="panel">
+    <div class="panel-title">Prix Actuel</div>
+    <div class="price-main" id="price">—</div>
+    <div style="margin-bottom:12px;"><span class="price-change up" id="price-change">—</span></div>
+    <div class="tf-toggle">
+      <button class="tf-btn active" onclick="setTF(this,'1M')">1M</button>
+      <button class="tf-btn" onclick="setTF(this,'5M')">5M</button>
+      <button class="tf-btn" onclick="setTF(this,'15M')">15M</button>
+    </div>
+    <div class="candle-chart" id="candles"></div>
+    <div style="margin-top:12px;display:flex;justify-content:space-between;">
+      <div>
+        <div style="font-size:.65rem;color:var(--muted);font-family:'Space Mono',monospace;">SPREAD EST.</div>
+        <div style="font-family:'Space Mono',monospace;font-size:.85rem;">~<span id="spread">18</span> pts</div>
+      </div>
+      <div>
+        <div style="font-size:.65rem;color:var(--muted);font-family:'Space Mono',monospace;">SESSION</div>
+        <div style="font-family:'Space Mono',monospace;font-size:.85rem;" id="cur-session">—</div>
+      </div>
+      <div>
+        <div style="font-size:.65rem;color:var(--muted);font-family:'Space Mono',monospace;">VOLATILITÉ</div>
+        <div style="font-family:'Space Mono',monospace;font-size:.85rem;" id="volatility-label">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Sessions de Trading</div>
+    <div class="sessions-grid" id="sessions-grid"></div>
+    <div style="margin-top:16px;padding:10px;background:rgba(201,168,76,.05);border:1px solid rgba(201,168,76,.15);border-radius:4px;">
+      <div style="font-family:'Space Mono',monospace;font-size:.6rem;color:var(--gold);margin-bottom:4px;">⭐ FENÊTRES OPTIMALES</div>
+      <div style="font-size:.72rem;color:var(--muted);line-height:1.6;">
+        <strong style="color:var(--text);">08h00–10h30 GMT</strong> — London Open (meilleure)<br>
+        <strong style="color:var(--text);">13h30–16h00 GMT</strong> — NY+London Overlap<br>
+        <strong style="color:var(--text);">20h00–22h00 GMT</strong> — Asia Open (range réduit)
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Signal Scalping</div>
+    <div class="signal-box neutral" id="main-signal">
+      <div class="signal-label" id="signal-text">CHARGEMENT</div>
+      <div class="signal-sub" id="signal-sub">RÉCUPÉRATION DES DONNÉES...</div>
+    </div>
+    <div class="score-wrap">
+      <div class="score-label"><span>FORCE DU SIGNAL</span><span id="score-pct">0%</span></div>
+      <div class="score-bar"><div class="score-fill" id="score-fill" style="width:0%"></div></div>
+    </div>
+    <div style="margin-top:14px;">
+      <div class="indicator-row">
+        <span class="ind-name">EMA200 (tendance)</span>
+        <span class="ind-value" id="ema200-val">—</span>
+        <span class="ind-signal neut" id="ema200-sig">—</span>
+      </div>
+      <div class="indicator-row">
+        <span class="ind-name">EMA5/EMA12</span>
+        <span class="ind-value" id="ema-cross-val">—</span>
+        <span class="ind-signal neut" id="ema-cross-sig">—</span>
+      </div>
+      <div class="indicator-row">
+        <span class="ind-name">RSI (14)</span>
+        <span class="ind-value" id="rsi-val">—</span>
+        <span class="ind-signal neut" id="rsi-sig">—</span>
+      </div>
+      <div class="indicator-row">
+        <span class="ind-name">ATR (14)</span>
+        <span class="ind-value" id="atr-val">—</span>
+        <span class="ind-signal neut" id="atr-sig">—</span>
+      </div>
+      <div class="indicator-row">
+        <span class="ind-name">Volume Relatif</span>
+        <span class="ind-value" id="vol-val">—</span>
+        <span class="ind-signal neut" id="vol-sig">—</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ROW 2 -->
+<div class="grid2">
+  <div class="panel">
+    <div class="panel-title">Niveaux Clés du Jour — Pivots Calculés</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div>
+        <div style="font-size:.65rem;font-family:'Space Mono',monospace;color:var(--muted);margin-bottom:8px;">RÉSISTANCES</div>
+        <table class="levels-table">
+          <tr><td>R3</td><td class="lv-res" id="lv-r3">—</td></tr>
+          <tr><td>R2</td><td class="lv-res" id="lv-r2">—</td></tr>
+          <tr><td>R1</td><td class="lv-res" id="lv-r1">—</td></tr>
+          <tr><td>ATH Jour</td><td class="lv-res" id="lv-high">—</td></tr>
+        </table>
+      </div>
+      <div>
+        <div style="font-size:.65rem;font-family:'Space Mono',monospace;color:var(--muted);margin-bottom:8px;">SUPPORTS</div>
+        <table class="levels-table">
+          <tr><td>Pivot Central</td><td class="lv-pivot" id="lv-pivot">—</td></tr>
+          <tr><td>S1</td><td class="lv-sup" id="lv-s1">—</td></tr>
+          <tr><td>S2</td><td class="lv-sup" id="lv-s2">—</td></tr>
+          <tr><td>ATL Jour</td><td class="lv-sup" id="lv-low">—</td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="pivot-info" id="pivot-source" style="margin-top:10px;">
+      Calcul : Pivot = (High + Low + Close) / 3 · Données J-1
+    </div>
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+      <div class="alert-box">
+        <div class="alert-header">⚡ ZONE D'INTÉRÊT INSTITUTIONNEL</div>
+        <span id="zone-text">Chargement de la zone institutionnelle...</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Gestionnaire de Risque</div>
+    <div style="margin-bottom:14px;">
+      <div style="font-size:.72rem;color:var(--muted);margin-bottom:6px;">Solde du compte (USD)</div>
+      <input type="number" id="balance-input" value="1000" min="100" step="100"
+        style="background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:4px;font-family:'Space Mono',monospace;font-size:.82rem;width:100%;outline:none;"
+        oninput="calcRisk()">
+    </div>
+    <div style="margin-bottom:14px;">
+      <div style="font-size:.72rem;color:var(--muted);margin-bottom:6px;">Risque par trade (%)</div>
+      <div style="display:flex;gap:6px;">
+        <button class="tf-btn active" id="r1btn" onclick="setRisk(this,1)">1%</button>
+        <button class="tf-btn" id="r2btn" onclick="setRisk(this,2)">2%</button>
+        <button class="tf-btn" id="r3btn" onclick="setRisk(this,3)">3%</button>
+      </div>
+    </div>
+    <div class="risk-row"><span class="risk-label">Risque $</span><span class="risk-val" id="risk-dollar">$10.00</span></div>
+    <div class="risk-row"><span class="risk-label">SL recommandé</span><span class="risk-val" id="risk-sl">150 pts (15 pips)</span></div>
+    <div class="risk-row"><span class="risk-label">Lot size</span><span class="risk-val green" id="risk-lot">—</span></div>
+    <div class="risk-row"><span class="risk-label">TP 1:2 RR</span><span class="risk-val green" id="risk-tp1">+300 pts</span></div>
+    <div class="risk-row"><span class="risk-label">TP 1:3 RR</span><span class="risk-val green" id="risk-tp2">+450 pts</span></div>
+    <div class="risk-row"><span class="risk-label">Gain potentiel (1:2)</span><span class="risk-val green" id="risk-gain">—</span></div>
+    <div class="risk-row"><span class="risk-label">Perte max journalière</span><span class="risk-val red" id="risk-maxloss">—</span></div>
+  </div>
+</div>
+
+<!-- ROW 3 -->
+<div class="full">
+  <div class="panel">
+    <div class="panel-title">Stratégie de Scalping Institutionnelle — Protocole Complet</div>
+    <div class="flow-steps">
+      <div class="flow-step"><div class="flow-num">1</div><div class="flow-content">
+        <div class="flow-title">Biais Directionnel (H4/H1) — "Trade with the river"</div>
+        <div class="flow-desc">Identifier la tendance macro sur H4. Prix > EMA200 H1 = <strong>biais ACHAT exclusif</strong>. Prix &lt; EMA200 H1 = <strong>biais VENTE exclusif</strong>. Ne jamais counter-trader ce biais.</div>
+      </div></div>
+      <div class="flow-step"><div class="flow-num">2</div><div class="flow-content">
+        <div class="flow-title">Zone Institutionnelle d'Entrée (5M)</div>
+        <div class="flow-desc">Attendre un pullback vers <strong>Pivot, EMA200 5M, zone de demande/offre</strong>. Le prix "respire" toujours avant de continuer.</div>
+      </div></div>
+      <div class="flow-step"><div class="flow-num">3</div><div class="flow-content">
+        <div class="flow-title">Confirmation 1M — Entry Trigger</div>
+        <div class="flow-desc"><strong>Croisement EMA5/EMA12</strong> dans le sens du biais + <strong>RSI 45–65 (ACHAT)</strong> ou <strong>35–55 (VENTE)</strong>. Bougie confirmée. Volume > moyenne.</div>
+      </div></div>
+      <div class="flow-step"><div class="flow-num">4</div><div class="flow-content">
+        <div class="flow-title">Gestion du Trade</div>
+        <div class="flow-desc"><strong>SL :</strong> swing local + 15 pts. <strong>TP1 :</strong> 1.5×SL → fermer 50%. <strong>TP2 :</strong> 2.5×SL → tout fermer. <strong>BE :</strong> SL au prix d'entrée après TP1.</div>
+      </div></div>
+      <div class="flow-step"><div class="flow-num">5</div><div class="flow-content">
+        <div class="flow-title">Discipline Absolue</div>
+        <div class="flow-desc">Max <strong>3 pertes consécutives → STOP</strong>. Jamais 15 min avant NFP/CPI/FOMC. Fermer avant 23h30 GMT. <strong>+2% gain = fin de session.</strong></div>
+      </div></div>
+    </div>
+    <div class="rules-grid">
+      <div class="rule-card"><div class="rule-num">✓</div><div class="rule-title">CONDITIONS ACHAT</div><div class="rule-body"><strong>1.</strong> Prix > EMA200<br><strong>2.</strong> EMA5 croise EMA12 ↑<br><strong>3.</strong> RSI entre 45 et 65<br><strong>4.</strong> ATR > 1.5<br><strong>5.</strong> Pullback sur support</div></div>
+      <div class="rule-card"><div class="rule-num">✓</div><div class="rule-title">CONDITIONS VENTE</div><div class="rule-body"><strong>1.</strong> Prix &lt; EMA200<br><strong>2.</strong> EMA5 croise EMA12 ↓<br><strong>3.</strong> RSI entre 35 et 55<br><strong>4.</strong> ATR > 1.5<br><strong>5.</strong> Rejet sur résistance</div></div>
+      <div class="rule-card"><div class="rule-num">✗</div><div class="rule-title">NE PAS TRADER SI</div><div class="rule-body">— <strong>Spread > 35 pts</strong><br>— <strong>RSI > 75 ou &lt; 25</strong><br>— <strong>News haute impact &lt; 30 min</strong><br>— <strong>3 pertes consécutives</strong><br>— <strong>Perte journalière > 3%</strong></div></div>
+      <div class="rule-card"><div class="rule-num">$</div><div class="rule-title">OBJECTIFS RÉALISTES</div><div class="rule-body">$1 000 → <strong>+$20/jour (2%)</strong><br>$5 000 → <strong>+$100/jour (2%)</strong><br>2–4 trades max/jour<br>Win rate visé : 55–65%<br>RR minimum : 1:1.5</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ROW 4 -->
+<div class="grid3b">
+  <div class="panel">
+    <div class="panel-title">Contexte Fondamental</div>
+    <div class="alert-box"><div class="alert-header">📰 DRIVERS GOLD</div>
+      L'Or évolue en corrélation inverse avec le <strong>DXY</strong> et les <strong>taux réels US</strong>. DXY faible = or fort. Surveiller <strong>FOMC, CPI/PCE</strong> et géopolitique.
+    </div>
+    <div class="indicator-row"><span class="ind-name">DXY (corrél. -0.82)</span><span class="ind-signal bear">FAIBLE</span></div>
+    <div class="indicator-row"><span class="ind-name">Taux 10Y US réels</span><span class="ind-signal bull">EN BAISSE</span></div>
+    <div class="indicator-row"><span class="ind-name">Sentiment Risk-Off</span><span class="ind-signal bull">ACTIF</span></div>
+    <div class="indicator-row"><span class="ind-name">Biais Fed</span><span class="ind-signal neut">NEUTRE</span></div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Calendrier Économique</div>
+    <div id="econ-calendar"></div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Checklist Avant Trade</div>
+    <div id="checklist"></div>
+  </div>
+</div>
+
+<footer>
+  <p>XAUUSD SCALPING INSTITUTIONNEL · GMT+0 · Exness Hedge</p>
+  <p>⚠ Analyse informative — Trading = risque de perte en capital</p>
+</footer>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  CONFIG API
+// ═══════════════════════════════════════════════════════
+// ▼▼▼ COLLE TA CLÉ TWELVEDATA ICI (entre les guillemets) ▼▼▼
+let API_KEY = '9cc7f2618fe14949a187e78c241242ad';
+// ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+const SYMBOL = 'XAU/USD';
+
+
+
+// ═══════════════════════════════════════════════════════
+//  DONNÉES GLOBALES
+// ═══════════════════════════════════════════════════════
+let closes = [], highs = [], lows = [], volumes = [];
+let currentPrice = 0;
+let pivotData = null;   // { pivot, r1, r2, r3, s1, s2, s3, prevH, prevL, prevC }
+let lastCandles = [];   // dernières bougies pour le mini-chart
+
+// ═══════════════════════════════════════════════════════
+//  CALCULS INDICATEURS — sur vrais OHLCV
+// ═══════════════════════════════════════════════════════
+
+// EMA
+function calcEMA(data, period) {
+  if (data.length < period) return null;
+  const k = 2 / (period + 1);
+  let ema = data.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  for (let i = period; i < data.length; i++) ema = data[i] * k + ema * (1 - k);
+  return +ema.toFixed(2);
+}
+
+// RSI
+function calcRSI(data, period = 14) {
+  if (data.length < period + 1) return null;
+  const slice = data.slice(-period - 1);
+  let gains = 0, losses = 0;
+  for (let i = 1; i < slice.length; i++) {
+    const d = slice[i] - slice[i - 1];
+    if (d > 0) gains += d; else losses -= d;
+  }
+  const avgG = gains / period, avgL = losses / period;
+  if (avgL === 0) return 100;
+  const rs = avgG / avgL;
+  return +(100 - 100 / (1 + rs)).toFixed(1);
+}
+
+// ATR (true range moyen)
+function calcATR(highs, lows, closes, period = 14) {
+  if (highs.length < period + 1) return null;
+  const trs = [];
+  for (let i = 1; i < highs.length; i++) {
+    const tr = Math.max(
+      highs[i] - lows[i],
+      Math.abs(highs[i] - closes[i - 1]),
+      Math.abs(lows[i] - closes[i - 1])
+    );
+    trs.push(tr);
+  }
+  const recent = trs.slice(-period);
+  return +(recent.reduce((a, b) => a + b, 0) / period).toFixed(3);
+}
+
+// Pivots classiques (Standard Pivot Points)
+function calcPivots(high, low, close) {
+  const pivot = +((high + low + close) / 3).toFixed(2);
+  const r1    = +(2 * pivot - low).toFixed(2);
+  const s1    = +(2 * pivot - high).toFixed(2);
+  const r2    = +(pivot + (high - low)).toFixed(2);
+  const s2    = +(pivot - (high - low)).toFixed(2);
+  const r3    = +(high + 2 * (pivot - low)).toFixed(2);
+  const s3    = +(low - 2 * (high - pivot)).toFixed(2);
+  return { pivot, r1, s1, r2, s2, r3, s3, prevH: high, prevL: low, prevC: close };
+}
+
+// Volume relatif (dernier vs moyenne des 10 précédents)
+function calcVolRatio(volumes) {
+  if (volumes.length < 11) return 1;
+  const last = volumes[volumes.length - 1];
+  const avg  = volumes.slice(-11, -1).reduce((a, b) => a + b, 0) / 10;
+  return avg > 0 ? +(last / avg).toFixed(2) : 1;
+}
+
+// ═══════════════════════════════════════════════════════
+//  FETCH DONNÉES TWELVE DATA
+// ═══════════════════════════════════════════════════════
+
+async function tdFetch(endpoint) {
+  const url = 'https://api.twelvedata.com' + endpoint;
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error('HTTP ' + resp.status);
+  return await resp.json();
+}
+
+async function fetchCandles(interval = '1min', outputsize = 220) {
+  const data = await tdFetch(`/time_series?symbol=${encodeURIComponent(SYMBOL)}&interval=${interval}&outputsize=${outputsize}&apikey=${API_KEY}`);
+  if (data.status === 'error' || !data.values) throw new Error(data.message || 'API error');
+  return data.values.reverse();
+}
+
+async function fetchQuote() {
+  const data = await tdFetch(`/quote?symbol=${encodeURIComponent(SYMBOL)}&apikey=${API_KEY}`);
+  if (data.status === 'error' || !data.close) throw new Error('Quote error');
+  return data;
+}
+
+// ── PRIX EN TEMPS RÉEL (endpoint /price — léger, 1 crédit) ──────────────
+async function fetchLivePrice() {
+  if (!API_KEY) return;
+  try {
+    const data = await tdFetch(`/price?symbol=${encodeURIComponent(SYMBOL)}&apikey=${API_KEY}`);
+    if (data && data.price) {
+      const newPrice = parseFloat(data.price);
+      if (newPrice && newPrice !== currentPrice) {
+        // Mettre à jour l'historique des closes pour les indicateurs
+        closes.push(newPrice);
+        highs.push(newPrice);
+        lows.push(newPrice);
+        volumes.push(volumes[volumes.length - 1] || 100);
+        if (closes.length > 220) { closes.shift(); highs.shift(); lows.shift(); volumes.shift(); }
+
+        // Mettre à jour la dernière bougie du mini-chart
+        if (lastCandles.length > 0) {
+          lastCandles[lastCandles.length - 1].close = newPrice;
+          lastCandles[lastCandles.length - 1].high  = Math.max(lastCandles[lastCandles.length - 1].high || newPrice, newPrice);
+          lastCandles[lastCandles.length - 1].low   = Math.min(lastCandles[lastCandles.length - 1].low  || newPrice, newPrice);
+        }
+
+        currentPrice = newPrice;
+        updatePrice();
+        updateIndicators();
+        renderCandles();
+        calcRisk();
+
+        // Flash visuel sur le prix
+        const priceEl = document.getElementById('price');
+        priceEl.style.transition = 'opacity .15s';
+        priceEl.style.opacity = '0.4';
+        setTimeout(() => { priceEl.style.opacity = '1'; }, 150);
+      }
+    }
+  } catch (err) {
+    console.warn('[LivePrice] Erreur:', err.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  CHARGEMENT PRINCIPAL
+// ═══════════════════════════════════════════════════════
+
+async function loadData() {
+  setBadge('CHARGEMENT...', 'var(--gold)', '#F0D080');
+  try {
+    // 1. Bougies 1M (220 = assez pour EMA200)
+    const candles = await fetchCandles('1min', 220);
+
+    closes  = candles.map(c => parseFloat(c.close));
+    highs   = candles.map(c => parseFloat(c.high));
+    lows    = candles.map(c => parseFloat(c.low));
+    volumes = candles.map(c => parseFloat(c.volume || 1));
+    lastCandles = candles.slice(-16);
+    currentPrice = closes[closes.length - 1];
+
+    // 2. Bougies daily pour pivots (High/Low/Close de la veille)
+    const daily = await fetchCandles('1day', 3);
+    const yesterday = daily[daily.length - 2]; // J-1
+    if (yesterday) {
+      pivotData = calcPivots(
+        parseFloat(yesterday.high),
+        parseFloat(yesterday.low),
+        parseFloat(yesterday.close)
+      );
+    }
+
+    updateAll();
+    setBadge('EN DIRECT — TWELVE DATA', 'rgba(0,229,160,.25)', 'var(--green)');
+  } catch (err) {
+    console.error('[loadData] Erreur:', err.message);
+    setBadge('ERREUR API — SIMULATION', 'rgba(255,69,96,.3)', 'var(--red)');
+    runSimulation();
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  SIMULATION FALLBACK (sans clé API)
+// ═══════════════════════════════════════════════════════
+
+function runSimulation() {
+  setBadge('SIMULATION', 'rgba(240,208,128,.2)', '#F0D080');
+
+  // Construire un historique synthétique réaliste à partir de 4648
+  let p = 4648.00;
+  closes = []; highs = []; lows = []; volumes = [];
+  for (let i = 0; i < 220; i++) {
+    const o = p;
+    const c = +(o + (Math.random() - 0.49) * 1.5).toFixed(2);
+    const h = +(Math.max(o, c) + Math.random() * 0.8).toFixed(2);
+    const l = +(Math.min(o, c) - Math.random() * 0.8).toFixed(2);
+    const v = 100 + Math.random() * 200;
+    closes.push(c); highs.push(h); lows.push(l); volumes.push(v);
+    p = c;
+  }
+  lastCandles = closes.slice(-16).map((c, i) => ({
+    close: c, open: closes[closes.length - 17 + i] || c,
+    high: highs[highs.length - 16 + i], low: lows[lows.length - 16 + i]
+  }));
+  currentPrice = closes[closes.length - 1];
+
+  // Pivots simulés à partir des données synthétiques du "jour précédent"
+  const pHigh = Math.max(...highs.slice(-1440, -720) || highs.slice(-100, -50));
+  const pLow  = Math.min(...lows.slice(-1440, -720) || lows.slice(-100, -50));
+  const pClose = closes[closes.length - 100] || 4648;
+  pivotData = calcPivots(
+    +pHigh.toFixed(2),
+    +pLow.toFixed(2),
+    +pClose.toFixed(2)
+  );
+
+  updateAll();
+
+  // Ticker simulation toutes les 2s
+  setInterval(() => {
+    const delta = (Math.random() - 0.49) * 1.2;
+    const newClose = +(currentPrice + delta).toFixed(2);
+    closes.push(newClose);
+    highs.push(+(newClose + Math.random() * 0.5).toFixed(2));
+    lows.push(+(newClose - Math.random() * 0.5).toFixed(2));
+    volumes.push(100 + Math.random() * 200);
+    if (closes.length > 220) { closes.shift(); highs.shift(); lows.shift(); volumes.shift(); }
+    lastCandles.push({ close: newClose, open: currentPrice, high: highs[highs.length-1], low: lows[lows.length-1] });
+    if (lastCandles.length > 16) lastCandles.shift();
+    currentPrice = newClose;
+    updateAll();
+  }, 2000);
+}
+
+// ═══════════════════════════════════════════════════════
+//  MISE À JOUR COMPLÈTE DE L'AFFICHAGE
+// ═══════════════════════════════════════════════════════
+
+function updateAll() {
+  updatePrice();
+  updateIndicators();
+  updatePivots();
+  renderCandles();
+  calcRisk();
+}
+
+function updatePrice() {
+  const open24h  = closes[0] || currentPrice;
+  const diff     = +(currentPrice - open24h).toFixed(2);
+  const pct      = +((diff / open24h) * 100).toFixed(2);
+
+  document.getElementById('price').textContent =
+    currentPrice.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const chEl = document.getElementById('price-change');
+  if (diff >= 0) {
+    chEl.textContent = `▲ +${diff.toFixed(2)} (+${pct.toFixed(2)}%)`;
+    chEl.className = 'price-change up';
+  } else {
+    chEl.textContent = `▼ ${diff.toFixed(2)} (${pct.toFixed(2)}%)`;
+    chEl.className = 'price-change down';
+  }
+}
+
+function updateIndicators() {
+  if (closes.length < 14) return;
+
+  const ema5   = calcEMA(closes, 5);
+  const ema12  = calcEMA(closes, 12);
+  const ema200 = calcEMA(closes, Math.min(200, closes.length));
+  const rsi    = calcRSI(closes, 14);
+  const atr    = calcATR(highs, lows, closes, 14);
+  const volR   = calcVolRatio(volumes);
+
+  // EMA200
+  if (ema200 !== null) {
+    document.getElementById('ema200-val').textContent = ema200.toFixed(2);
+    const bull200 = currentPrice > ema200;
+    document.getElementById('ema200-sig').textContent = bull200 ? 'HAUSSIER ▲' : 'BAISSIER ▼';
+    document.getElementById('ema200-sig').className = `ind-signal ${bull200 ? 'bull' : 'bear'}`;
+  }
+
+  // EMA5/12
+  if (ema5 !== null && ema12 !== null) {
+    const crossBull = ema5 > ema12;
+    document.getElementById('ema-cross-val').textContent = `${ema5} / ${ema12}`;
+    document.getElementById('ema-cross-sig').textContent = crossBull ? 'CROISE ↑' : 'CROISE ↓';
+    document.getElementById('ema-cross-sig').className = `ind-signal ${crossBull ? 'bull' : 'bear'}`;
+  }
+
+  // RSI
+  if (rsi !== null) {
+    document.getElementById('rsi-val').textContent = rsi;
+    const rsiCls = rsi > 70 ? 'bear' : rsi < 30 ? 'bear' : 'bull';
+    document.getElementById('rsi-sig').textContent = rsi > 70 ? 'SURACH.' : rsi < 30 ? 'SURVEND.' : 'NEUTRE';
+    document.getElementById('rsi-sig').className = `ind-signal ${rsiCls}`;
+  }
+
+  // ATR
+  if (atr !== null) {
+    document.getElementById('atr-val').textContent = atr.toFixed(2);
+    const atrOk = atr > 1.5;
+    document.getElementById('atr-sig').textContent = atrOk ? 'SUFFISANT' : 'FAIBLE';
+    document.getElementById('atr-sig').className = `ind-signal ${atrOk ? 'bull' : 'neut'}`;
+    const vEl = document.getElementById('volatility-label');
+    vEl.textContent = atr > 2.5 ? 'HAUTE' : atr > 1.5 ? 'MOYENNE' : 'BASSE';
+    vEl.style.color = atr > 2.5 ? 'var(--green)' : atr > 1.5 ? 'var(--gold)' : 'var(--red)';
+  }
+
+  // Volume relatif
+  document.getElementById('vol-val').textContent = volR + 'x';
+  document.getElementById('vol-sig').textContent = volR > 1.3 ? 'FORT' : 'MOYEN';
+  document.getElementById('vol-sig').className = `ind-signal ${volR > 1.3 ? 'bull' : 'neut'}`;
+
+  // ── CALCUL SIGNAL (5 conditions) ──────────────────────────────
+  let score = 0;
+  const above200 = ema200 !== null && currentPrice > ema200;
+  const below200 = ema200 !== null && currentPrice < ema200;
+  const crossUp  = ema5 !== null && ema12 !== null && ema5 > ema12;
+  const crossDn  = ema5 !== null && ema12 !== null && ema5 < ema12;
+  const rsiBull  = rsi !== null && rsi >= 45 && rsi <= 65;
+  const rsiBear  = rsi !== null && rsi >= 35 && rsi <= 55;
+  const atrOk    = atr !== null && atr > 1.5;
+  const volOk    = volR >= 1.2;
+
+  // Chaque condition compte 1 point
+  if (above200 || below200) score++;
+  if (crossUp   || crossDn)  score++;
+  if (rsiBull   || rsiBear)  score++;
+  if (atrOk)                 score++;
+  if (volOk)                 score++;
+
+  const pct = Math.round(score / 5 * 100);
+  document.getElementById('score-pct').textContent  = pct + '%';
+  document.getElementById('score-fill').style.width = pct + '%';
+
+  const box = document.getElementById('main-signal');
+  const txt = document.getElementById('signal-text');
+  const sub = document.getElementById('signal-sub');
+
+  if (score >= 4 && above200 && crossUp && rsiBull) {
+    box.className = 'signal-box buy';
+    txt.textContent = '▲  ACHAT';
+  } else if (score >= 4 && below200 && crossDn && rsiBear) {
+    box.className = 'signal-box sell';
+    txt.textContent = '▼  VENTE';
+  } else if (score >= 3) {
+    box.className = 'signal-box neutral';
+    txt.textContent = '—  SURVEILLER';
+  } else {
+    box.className = 'signal-box neutral';
+    txt.textContent = '—  ATTENDRE';
+  }
+  sub.textContent = `CONFLUENCE ${score}/5 CONDITIONS`;
+}
+
+function updatePivots() {
+  if (!pivotData) return;
+  const { pivot, r1, r2, r3, s1, s2, s3, prevH, prevL, prevC } = pivotData;
+
+  document.getElementById('lv-pivot').textContent = pivot.toFixed(2);
+  document.getElementById('lv-r1').textContent    = r1.toFixed(2);
+  document.getElementById('lv-r2').textContent    = r2.toFixed(2);
+  document.getElementById('lv-r3').textContent    = r3.toFixed(2);
+  document.getElementById('lv-s1').textContent    = s1.toFixed(2);
+  document.getElementById('lv-s2').textContent    = s2.toFixed(2);
+  document.getElementById('lv-high').textContent  = prevH.toFixed(2);
+  document.getElementById('lv-low').textContent   = prevL.toFixed(2);
+
+  document.getElementById('pivot-source').innerHTML =
+    `<strong>J-1 :</strong> H=${prevH.toFixed(2)}  L=${prevL.toFixed(2)}  C=${prevC.toFixed(2)}  →  Pivot=(H+L+C)/3`;
+
+  // Zone institutionnelle dynamique
+  const biais   = currentPrice > pivot ? 'haussier' : 'baissier';
+  const entry   = currentPrice > pivot ? `${s1.toFixed(2)}–${pivot.toFixed(2)}` : `${pivot.toFixed(2)}–${r1.toFixed(2)}`;
+  const noShort = currentPrice > pivot ? r1.toFixed(2) : s1.toFixed(2);
+  document.getElementById('zone-text').innerHTML =
+    `Prix ${currentPrice > pivot ? 'au-dessus' : 'en-dessous'} du Pivot → Biais <strong>${biais}</strong>. 
+     Entrées ${currentPrice > pivot ? 'ACHAT' : 'VENTE'} sur pullbacks vers <strong>${entry}</strong>. 
+     ${currentPrice > pivot ? 'Ne pas shorter sous' : 'Ne pas acheter au-dessus de'} <strong>${noShort}</strong> sans cassure confirmée.`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  MINI CANDLES CHART
+// ═══════════════════════════════════════════════════════
+function renderCandles() {
+  const el = document.getElementById('candles');
+  if (!lastCandles || lastCandles.length < 2) return;
+  const allH = lastCandles.map(c => parseFloat(c.high  || c.close));
+  const allL = lastCandles.map(c => parseFloat(c.low   || c.close));
+  const mn   = Math.min(...allL), mx = Math.max(...allH);
+  const range = mx - mn || 1;
+  el.innerHTML = '';
+  for (let i = 0; i < lastCandles.length; i++) {
+    const c    = lastCandles[i];
+    const op   = parseFloat(c.open  || (i > 0 ? lastCandles[i-1].close : c.close));
+    const cl   = parseFloat(c.close);
+    const hi   = parseFloat(c.high  || Math.max(op, cl));
+    const lo   = parseFloat(c.low   || Math.min(op, cl));
+    const bull = cl >= op;
+    const bodyH = Math.max(2, Math.abs(cl - op) / range * 50);
+    const btm   = (Math.min(cl, op) - mn) / range * 50;
+    const wickH = (hi - lo) / range * 50;
+    const wickB = (lo - mn) / range * 50;
+    const w = document.createElement('div');
+    w.className = `candle-wrap ${bull ? 'bull' : 'bear'}`;
+    w.innerHTML = `<div class="candle-wick" style="height:${wickH}px;bottom:${wickB}px;"></div>
+                   <div class="candle-body" style="height:${bodyH}px;bottom:${btm}px;"></div>`;
+    el.appendChild(w);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  HORLOGE + SESSIONS
+// ═══════════════════════════════════════════════════════
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getUTCHours()).padStart(2,'0');
+  const m = String(now.getUTCMinutes()).padStart(2,'0');
+  const s = String(now.getUTCSeconds()).padStart(2,'0');
+  document.getElementById('clock').textContent = `${h}:${m}:${s}`;
+  updateSessions(now.getUTCHours(), now.getUTCMinutes());
+}
+setInterval(updateClock, 1000);
+
+const SESSIONS = [
+  { name:'SYDNEY',   open:22, close:7,  color:'#38BDF8', note:'' },
+  { name:'TOKYO',    open:0,  close:9,  color:'#A78BFA', note:'' },
+  { name:'LONDON',   open:8,  close:17, color:'#C9A84C', note:'⭐ ' },
+  { name:'NEW YORK', open:13, close:22, color:'#F87171', note:'' },
+];
+function isOpen(o, c, h) { return o<c ? h>=o&&h<c : h>=o||h<c; }
+function prog(o, c, h, m) {
+  if (!isOpen(o,c,h)) return 0;
+  return Math.min(100, Math.round(((h-o+24)%24*60+m) / (((c-o+24)%24)*60) * 100));
+}
+function updateSessions(h, m) {
+  const active = SESSIONS.filter(s => isOpen(s.open, s.close, h));
+  const grid   = document.getElementById('sessions-grid');
+  grid.innerHTML = '';
+  SESSIONS.forEach(s => {
+    const act = isOpen(s.open, s.close, h);
+    const p   = prog(s.open, s.close, h, m);
+    const stxt = !act ? 'FERMÉ' : active.length >= 2 ? 'CHEVAUCHEMENT' : 'EN COURS';
+    const scls = !act ? 'inactive' : active.length >= 2 ? 'overlap' : 'active';
+    const row  = document.createElement('div');
+    row.className = 'session-row';
+    row.innerHTML = `
+      <span class="session-label">${s.note}${s.name}</span>
+      <div class="session-bar-wrap"><div class="session-bar" style="width:${p}%;background:${act?s.color:'rgba(255,255,255,.07)'}"></div></div>
+      <span class="sess-status ${scls}">${stxt}</span>`;
+    grid.appendChild(row);
+  });
+  const curEl = document.getElementById('cur-session');
+  if (!active.length)      { curEl.textContent='INTER-SESSION'; curEl.style.color='var(--muted)'; }
+  else if (active.length>=2){ curEl.textContent='CHEVAUCHEMENT'; curEl.style.color='var(--gold)'; }
+  else                      { curEl.textContent=active[0].name; curEl.style.color='var(--green)'; }
+}
+
+// ═══════════════════════════════════════════════════════
+//  RISK CALCULATOR
+// ═══════════════════════════════════════════════════════
+let currentRisk = 1;
+function setRisk(btn, pct) {
+  document.querySelectorAll('#r1btn,#r2btn,#r3btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  currentRisk = pct;
+  calcRisk();
+}
+function calcRisk() {
+  const bal  = parseFloat(document.getElementById('balance-input').value) || 1000;
+  const risk = +(bal * currentRisk / 100).toFixed(2);
+  const lot  = +(risk / 150).toFixed(2); // $1/pip pour 0.01 lot → 15 pips SL
+  document.getElementById('risk-dollar').textContent  = '$' + risk.toFixed(2);
+  document.getElementById('risk-lot').textContent     = lot + ' lots';
+  document.getElementById('risk-gain').textContent    = '$' + (risk * 2).toFixed(2);
+  document.getElementById('risk-maxloss').textContent = '$' + (risk * 3).toFixed(2) + ' (3 trades)';
+}
+
+// ═══════════════════════════════════════════════════════
+//  TF TOGGLE
+// ═══════════════════════════════════════════════════════
+function setTF(btn, tf) {
+  document.querySelectorAll('.tf-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('spread').textContent = tf==='1M'?'18':tf==='5M'?'14':'12';
+}
+
+// ═══════════════════════════════════════════════════════
+//  CALENDRIER ÉCONOMIQUE
+// ═══════════════════════════════════════════════════════
+const EVENTS = [
+  { time:'08:30', name:'PMI Services UK', impact:'med' },
+  { time:'10:00', name:'Indice ZEW EUR',  impact:'med' },
+  { time:'13:30', name:'CPI Core US',     impact:'high' },
+  { time:'15:00', name:'ISM Non-Mfg',     impact:'high' },
+  { time:'19:00', name:'FOMC Minutes',    impact:'high' },
+];
+(function buildCal() {
+  const cal = document.getElementById('econ-calendar');
+  const nh  = new Date().getUTCHours(), nm = new Date().getUTCMinutes();
+  EVENTS.forEach(ev => {
+    const [eh,em] = ev.time.split(':').map(Number);
+    const past = nh*60+nm > eh*60+em;
+    const dot  = ev.impact==='high'?'#FF4560':'#F0D080';
+    const bg   = ev.impact==='high'?'rgba(255,69,96,.15)':'rgba(240,208,128,.1)';
+    const clr  = ev.impact==='high'?'#FF4560':'#F0D080';
+    cal.innerHTML += `<div class="econ-row" style="opacity:${past?.4:1}">
+      <span style="font-family:'Space Mono',monospace;font-size:.63rem;color:var(--muted);width:38px;">${ev.time}</span>
+      <span style="width:8px;height:8px;border-radius:50%;background:${dot};flex-shrink:0;display:inline-block;"></span>
+      <span style="font-size:.71rem;flex:1;${past?'text-decoration:line-through;':''}">${ev.name}</span>
+      <span style="font-size:.6rem;font-family:'Space Mono',monospace;padding:2px 6px;border-radius:2px;background:${bg};color:${clr}">${ev.impact.toUpperCase()}</span>
+    </div>`;
+  });
+})();
+
+// ═══════════════════════════════════════════════════════
+//  CHECKLIST
+// ═══════════════════════════════════════════════════════
+(function buildChecklist() {
+  const checks = [
+    { text:'Biais directionnel identifié (H4/H1)', ok:true },
+    { text:'Niveau clé repéré (Pivot/EMA200)',      ok:true },
+    { text:'ATR > 1.5 (volatilité suffisante)',     ok:true },
+    { text:'Pas de news haute impact < 30 min',     ok:true },
+    { text:'Spread dans les limites normales',       ok:true },
+    { text:'Max 3 trades/jour respecté',            ok:true },
+    { text:'RR minimum 1:1.5 calculé',              ok:false },
+    { text:'SL défini AVANT ouverture',             ok:false },
+  ];
+  const cl = document.getElementById('checklist');
+  checks.forEach(c => {
+    cl.innerHTML += `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);">
+      <span style="width:18px;height:18px;border-radius:3px;border:1px solid ${c.ok?'var(--green)':'var(--muted)'};background:${c.ok?'rgba(0,229,160,.12)':'transparent'};display:flex;align-items:center;justify-content:center;font-size:.65rem;color:${c.ok?'var(--green)':'var(--muted)'};">${c.ok?'✓':''}</span>
+      <span style="font-size:.71rem;color:${c.ok?'var(--text)':'var(--muted)'}">${c.text}</span>
+    </div>`;
+  });
+})();
+
+// ═══════════════════════════════════════════════════════
+//  BADGE HELPER
+// ═══════════════════════════════════════════════════════
+function setBadge(txt, borderClr, color) {
+  document.getElementById('badge-txt').textContent = txt;
+  const b = document.querySelector('.live-badge');
+  b.style.borderColor = borderClr;
+  b.style.color = color;
+}
+
+// ═══════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════
+async function init() {
+  updateClock();
+  calcRisk();
+
+  try {
+    await loadData();
+    setInterval(fetchLivePrice, 10000);
+    setInterval(loadData, 60000);
+  } catch(e) {
+    console.warn('Init error, fallback simulation:', e.message);
+    runSimulation();
+  }
+
+  // Masquer le loader
+  setTimeout(() => {
+    const l = document.getElementById('loader');
+    l.style.opacity = '0';
+    setTimeout(() => l.style.display = 'none', 600);
+  }, 1800);
+}
+
+init();
+</script>
+</body>
+</html>
